@@ -921,9 +921,10 @@ set_var_value_callback (const gchar *name, const gchar *value, gpointer data, GE
     (void) data;
     (void) error;
     GString* key = g_string_new(name);
-    key = g_string_erase(key, 0, 2); // remove '--' part
+    key = g_string_erase(key, 0, 2); // remove '--' part    // TODO: delete '-' part for short options, figure out why it breaks on "uzbl --verbose --uri foo"
     printf("setting %s to %s\n",key->str, value);
     set_var_value(key->str, (gchar *) value);
+    g_string_free (key);
     return TRUE;
 }
 
