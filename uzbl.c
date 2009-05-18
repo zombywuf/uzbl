@@ -64,6 +64,9 @@ const struct {
     void **ptr;
 } var_name_to_ptr[] = {
     { "uri",                (void *)&uzbl.state.uri                 },
+    { "verbose",            (void *)&uzbl.state.verbose             },
+    { "name",               (void *)&uzbl.state.instance_name       },
+    { "config",             (void *)&uzbl.state.config_file         },
     { "status_message",     (void *)&uzbl.gui.sbar.msg              },
     { "show_status",        (void *)&uzbl.behave.show_status        },
     { "status_top",         (void *)&uzbl.behave.status_top         },
@@ -128,10 +131,10 @@ make_var_to_name_hash() {
 /* commandline arguments (set initial values for the state variables) */
 static GOptionEntry entries[] =
 {
-    { "uri",     'u', 0, G_OPTION_ARG_STRING, &uzbl.state.uri,           "Uri to load at startup (equivalent to 'set uri = URI')", "URI" },
-    { "verbose", 'v', 0, G_OPTION_ARG_NONE,   &uzbl.state.verbose,       "Whether to print all messages or just errors.", NULL },
-    { "name",    'n', 0, G_OPTION_ARG_STRING, &uzbl.state.instance_name, "Name of the current instance (defaults to Xorg window id)", "NAME" },
-    { "config",  'c', 0, G_OPTION_ARG_STRING, &uzbl.state.config_file,   "Config file (this is pretty much equivalent to uzbl < FILE )", "FILE" },
+    { "uri",     'u', 0, G_OPTION_ARG_CALLBACK, &set_var_value_callback,           "Uri to load at startup (equivalent to 'set uri = URI')", "URI" },
+    { "verbose", 'v', 0, G_OPTION_ARG_CALLBACK, &set_var_value_callback,       "Whether to print all messages or just errors.", NULL },
+    { "name",    'n', 0, G_OPTION_ARG_CALLBACK, &set_var_value_callback, "Name of the current instance (defaults to Xorg window id)", "NAME" },
+    { "config",  'c', 0, G_OPTION_ARG_CALLBACK, &set_var_value_callback,   "Config file (this is pretty much equivalent to uzbl < FILE )", "FILE" },
     { NULL,      0, 0, 0, NULL, NULL, NULL }
 };
 
@@ -914,6 +917,17 @@ var_is(const char *x, const char *y) {
 }
 
 static gboolean
+set_var_value_callback (const gchar *name, const gchar *value, gpointer data, GError **error) {
+    (void) data;
+    (void) error;
+    GString* key = g_string_new(name);
+    key = g_string_erase(key, 0, 2); // remove '--' part
+    printf("setting %s to %s\n",key->str, value);
+    set_var_value(key->str, (gchar *) value);
+    return TRUE;
+}
+
+static gboolean
 set_var_value(gchar *name, gchar *val) {
     void **p = NULL;
     char *endp = NULL;
@@ -1681,11 +1695,6 @@ main (int argc, char* argv[]) {
 
     strcpy(uzbl.state.executable_path,argv[0]);
 
-    GOptionContext* context = g_option_context_new ("- some stuff here maybe someday");
-    g_option_context_add_main_entries (context, entries, NULL);
-    g_option_context_add_group (context, gtk_get_option_group (TRUE));
-    g_option_context_parse (context, &argc, &argv, NULL);
-    g_option_context_free(context);
     /* initialize hash table */
     uzbl.bindings = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, free_action);
 
@@ -1705,6 +1714,11 @@ main (int argc, char* argv[]) {
     commands_hash ();
     make_var_to_name_hash();
 
+    GOptionContext* context = g_option_context_new ("- some stuff here maybe someday");
+    g_option_context_add_main_entries (context, entries, NULL);
+    g_option_context_add_group (context, gtk_get_option_group (TRUE));
+    g_option_context_parse (context, &argc, &argv, NULL);
+    g_option_context_free(context);
 
     uzbl.gui.vbox = gtk_vbox_new (FALSE, 0);
 
@@ -1744,10 +1758,6 @@ main (int argc, char* argv[]) {
         update_title();
 
     create_stdin();
-
-    if(uzbl.state.uri)
-        load_uri (uzbl.gui.web_view, uzbl.state.uri);
-
 
     gtk_main ();
     clean_up();

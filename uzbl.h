@@ -362,4 +362,9 @@ static void handle_cookies (SoupSession *session,
 static void
 save_cookies (SoupMessage *msg,
 			  gpointer     user_data);
+
+static gboolean
+set_var_value_callback (const gchar *name, const gchar *value, gpointer data, GError **error);
+static gboolean
+set_var_value(gchar *name, gchar *val);
 /* vi: set et ts=4: */
