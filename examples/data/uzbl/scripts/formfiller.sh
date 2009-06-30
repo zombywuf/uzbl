@@ -1,59 +1,79 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# simple html form (eg for logins) filler (and manager) for uzbl.
-# uses settings files like: $keydir/<domain>
-# files contain lines like: <fieldname>: <value>
+# This scripts helps you in automatically filling (and managing the data)
+# for html forms (any html form, including login forms)
+#
+# We use a little helper script, defined by $js_helper,
+# which creates a JSON-ish object that contains the form information we want
+# to store. It is important that there is only one such object per file and the other(s)
+# should be commented out with a #
 
+# config examples:
+# bind II = sh $XDG_CONFIG_HOME/uzbl/scripts/formfiller.sh load
+# bind In = sh $XDG_CONFIG_HOME/uzbl/scripts/formfiller.sh new
+# bind Ie = sh $XDG_CONFIG_HOME/uzbl/scripts/formfiller.sh edit
 
 # user arg 1:
-# edit: force editing the file (falls back to new if not found)
-# new:  start with a new file.
-# load: try to load from file into form
+# load: load from file into form. creates new if doesn't exist yet
+# new:  creates a new file and lets you edit
+# edit: edit the file, loading it if it doesn't exist (TODO: is it correct to load first, and edit after?)
 
 # something else (or empty): if file not available: new, otherwise load.
 
+
+# arguments
+config=$1;  shift
+pid=$1;     shift
+xid=$1;     shift
+fifo=$1;    shift
+socket=$1;  shift
+url=$1;     shift
+title=$1;   shift
+cmd=$1;     shift
+
+# settings
 keydir=${XDG_DATA_HOME:-$HOME/.local/share}/uzbl/forms
-[ -d "`dirname $keydir`" ] || exit 1
-[ -d "$keydir" ] || mkdir "$keydir"
+js_helper=${XDG_CONFIG_HOME:-$HOME/.config}/uzbl/scripts/formmanager.js
 
-#editor=gvim
-editor='urxvt -e vim'
-
-config=$1; shift
-pid=$1;    shift
-xid=$1;    shift
-fifo=$1;   shift
-socket=$1; shift
-url=$1;    shift
-title=$1;  shift
-action=$1
-
-[ -d $keydir ] || mkdir $keydir || exit 1
-
-if [ "$action" != 'edit' -a  "$action" != 'new' -a "$action" != 'load' ]
-then
-	action=new
-	[[ -e $keydir/$domain ]] && action=load
-elif [ "$action" == 'edit' ] && [[ ! -e $keydir/$domain ]]
-then
-	action=new
-fi
+# set your editor here.  Note this is not the same as $EDITOR as we cannot just run an editor in the foreground in a terminal.
+editor=gvim
+#editor='urxvt -e vim'
 domain=$(echo $url | sed -re 's|(http\|https)+://([A-Za-z0-9\.]+)/.*|\2|')
 
+[[ -d "$keydir" ]] || mkdir -p "$keydir"
+[[ -d "`dirname $keydir`" ]] || exit 1
+[[ -e $js_helper ]] || exit 1
 
-#regex='s|.*<input.*?name="([[:graph:]]+)".*?/>.*|\1: |p' # sscj's first version, does not work on http://wiki.archlinux.org/index.php?title=Special:UserLogin&returnto=Main_Page
- regex='s|.*<input.*?name="([^"]*)".*|\1: |p' #works on arch wiki, but not on http://lists.uzbl.org/listinfo.cgi/uzbl-dev-uzbl.org TODO: improve
+function new(){
+    uzblctrl -s "$socket" -c 'print @<dumpForms()>@' | sed -e 's|},{|}\n{|g' -e 's|\(fields: \[\)|\1\n  |g' -e 's|}, {|}\n, {|g' -e 's|}]}|}\n]}\n|g' > "$keydir/$domain"
+}
+function edit(){
+    $editor $keydir/$domain
+}
+function load(){
+    grep -v "^#" $keydir/$domain | tr -d '\t\n'
+    echo 'js setForms('$(grep -v "^#" $keydir/$domain | tr -d '\t\n')')' > "$fifo";
+}
 
+# make sure to load up the
+echo script $js_helper > "$fifo";
 
-if [ "$action" = 'load' ]
-then
-	[[ -e $keydir/$domain ]] || exit 2
-	gawk -F': ' '{ print "js document.getElementsByName(\"" $1 "\")[0].value = \"" $2 "\";"}' $keydir/$domain >> $fifo
-else
-	if [ "$action" == 'new' ]
-	then
-		curl "$url" | grep '<input' | sed -nre "$regex" > $keydir/$domain
-	fi
-	[[ -e $keydir/$domain ]] || exit 3 #this should never happen, but you never know.
-	$editor $keydir/$domain #TODO: if user aborts save in editor, the file is already overwritten
-fi
+case $cmd in
+    "load")
+        [[ -e $keydir/$domain ]] || new
+        load
+        ;;
+    "new")
+        new
+        edit
+        ;;
+    "edit")
+        [[ -e $keydir/$domain ]] || load
+        edit
+        ;;
+     *)
+        echo 'js alert("No action specified: new, load or edit")' > "$fifo"
+        ;;
+esac
+
+# vim:set et ts=4 sw=4:

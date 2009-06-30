@@ -1,5 +1,6 @@
-form_sent: 
-redirect_url: 
-req_username: <your username>
-req_password: <password>
-login: 
+{id: 0, fields: [
+	{type: "hidden", name: "form_sent", value: "1"},
+ 	{type: "hidden", name: "redirect_url", value: "index.php"},
+ 	{type: "text", name: "req_username", value: ""},
+ 	{type: "password", name: "req_password", value: ""},
+ 	{type: "submit", name: "login", value: "Login"}]}
