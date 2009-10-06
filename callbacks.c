@@ -482,6 +482,30 @@ key_release_cb (GtkWidget* window, GdkEventKey* event) {
 }
 
 gboolean
+button_press_cb (GtkWidget* window, GdkEventButton* event) {
+    (void) window;
+    if(event->type != GDK_BUTTON_PRESS)
+        return FALSE;
+
+    if(event->button==2)
+    {
+        gchar* str=gtk_clipboard_wait_for_text (gtk_clipboard_get (GDK_SELECTION_PRIMARY));
+        if(str)
+        {
+            /* TODO: do this the new way. do we need a new event? or extend keypress event?
+             GString* keycmd = g_string_new(uzbl.state.keycmd);
+            //g_string_append (keycmd, str);
+            //uzbl.state.keycmd = g_string_free(keycmd, FALSE);
+            update_title (); */
+            g_free (str);
+        }
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+gboolean
 navigation_decision_cb (WebKitWebView *web_view, WebKitWebFrame *frame, WebKitNetworkRequest *request, WebKitWebNavigationAction *navigation_action, WebKitWebPolicyDecision *policy_decision, gpointer user_data) {
     (void) web_view;
     (void) frame;

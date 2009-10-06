@@ -30,6 +30,7 @@ In alphabetical order:
     Dieter Plaetinck (Dieter@be) <dieter AT plaetinck.be> - several contributions
     Dusan Popovic (dusanx) - many contributions to early uzbl
     Evgeny Grablyk - libsoup settings
+    Frank Marien - middlemouse paste patch
     Helmut Grohne (helmut) - move void **ptr to union, various fixes
     Henri Kemppainen (DuClare) <email is akarinotengoku AT THE DOMAIN OF gmail.com> - many contributions, mostly old handler code
     Jake Probst <jake.probst@gmail.com> - uzbl_tabbed: multiline tablist

@@ -1694,6 +1694,7 @@ create_mainbar () {
     g_object_connect((GObject*)g->mainbar,
       "signal::key-press-event",                    (GCallback)key_press_cb,    NULL,
       "signal::key-release-event",                  (GCallback)key_release_cb,  NULL,
+      "signal::button-press-event",                 (GCallback)button_press_cb,  NULL,
       NULL);
 
     return g->mainbar;
